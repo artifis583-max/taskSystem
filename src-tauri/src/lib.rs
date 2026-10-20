@@ -17,6 +17,8 @@ use tauri::menu::PredefinedMenuItem;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, RunEvent, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 
 const EDGE_MARGIN: i32 = 6;
+/// Logical size of the widget window (must match tauri.conf.json).
+const WIDGET_SIZE: (f64, f64) = (480.0, 528.0);
 
 fn show_widget(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("widget") {
@@ -34,7 +36,8 @@ pub(crate) fn open_dashboard(app: &AppHandle) -> tauri::Result<()> {
         w.unminimize()?;
         return w.set_focus();
     }
-    WebviewWindowBuilder::new(app, "dashboard", WebviewUrl::App("index.html?view=dashboard".into()))
+    // Same page as the widget; the page picks the dashboard view from its window label.
+    WebviewWindowBuilder::new(app, "dashboard", WebviewUrl::App("index.html".into()))
         .title("Task Widget")
         .inner_size(920.0, 640.0)
         .min_inner_size(720.0, 480.0)
@@ -80,7 +83,12 @@ fn place_widget(w: &WebviewWindow, saved: Option<(i32, i32)>) {
 /// Put the widget in the bottom-right corner of the primary monitor's work area (above the taskbar).
 fn place_bottom_right(w: &WebviewWindow) {
     let Ok(Some(monitor)) = w.primary_monitor() else { return };
-    let Ok(size) = w.outer_size() else { return };
+    let Ok(mut size) = w.outer_size() else { return };
+    // Before the window is first shown some platforms report 0×0; use the configured size then.
+    if size.width == 0 || size.height == 0 {
+        let scale = monitor.scale_factor();
+        size = tauri::PhysicalSize::new((WIDGET_SIZE.0 * scale) as u32, (WIDGET_SIZE.1 * scale) as u32);
+    }
     let area = monitor.work_area();
     let x = area.position.x + area.size.width as i32 - size.width as i32 - EDGE_MARGIN;
     let y = area.position.y + area.size.height as i32 - size.height as i32 - EDGE_MARGIN;
@@ -154,7 +162,14 @@ fn daily_backup(app: &AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_widget(app)))
+        // Launching again shows the widget, or the dashboard with `--dashboard`.
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if args.iter().any(|a| a == "--dashboard") {
+                let _ = open_dashboard(app);
+            } else {
+                show_widget(app);
+            }
+        }))
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -186,6 +201,9 @@ pub fn run() {
                 w.show()?;
             }
             watch_date(app.handle().clone());
+            if std::env::args().any(|a| a == "--dashboard") {
+                open_dashboard(app.handle())?;
+            }
             Ok(())
         })
         .on_window_event(|window, event| {

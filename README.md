@@ -52,6 +52,8 @@ npm run dev                  # preview the UI in a browser at http://localhost:1
 | `src-tauri/src/backup.rs` | Backups, rolling cleanup, validated restore |
 | `src/mockApi.ts` | Fake backend for browser preview only (`?view=dashboard` shows the dashboard) |
 
+Run the app with `--dashboard` to open the dashboard right away (also works on a running app).
+
 Data lives in `%APPDATA%\com.taskwidget.app\data.db`. Backups are in the `backups` folder next to it.
 
 ## Backups

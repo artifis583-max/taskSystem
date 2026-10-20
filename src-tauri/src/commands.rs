@@ -181,8 +181,10 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> R<bool> {
     Ok(al.is_enabled().unwrap_or(false))
 }
 
+/// Must be async: creating a window from a synchronous command deadlocks on Windows
+/// (the new window stays blank white).
 #[tauri::command]
-pub fn open_dashboard(app: AppHandle) -> R<()> {
+pub async fn open_dashboard(app: AppHandle) -> R<()> {
     crate::open_dashboard(&app).map_err(|e| AppError::Rule(format!("Couldn't open the dashboard: {e}")))
 }
 
