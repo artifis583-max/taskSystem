@@ -64,10 +64,26 @@ The mockups show three placeholder tabs. Default meaning (change in config if wa
 | **Upcoming** | Next 7 days, read-only, grouped by date. |
 | **Rewards** | Reward shop, revive count, buy/use revive. |
 
-### 2.3 Visual tokens
+### 2.3 Visual design
 
-| Token | Value |
-|---|---|
+The mockups set the **layout and motion only**. Their gray cards, yellow pills and display font were wireframe styling and are not the app's theme.
+
+Theme: clean Windows 11 style, light by default, dark when Windows is in dark mode. All colors are CSS variables in `src/styles.css` (`:root` for light, `prefers-color-scheme: dark` for dark).
+
+| Token | Light | Dark |
+|---|---|---|
+| Panel surface | `#F6F6F7` | `#202024` |
+| Card | `#FFFFFF` + 1px hairline border | `#2B2B30` |
+| Text / muted | `#1B1B1F` / `#6B6B73` | `#F2F2F4` / `#A4A4AD` |
+| Controls (tabs track, chips) | `#EBEBEE` | `#2B2B30` |
+| Accent (done, progress) | `#16A34A` | `#3FB950` |
+| Coin | `#F2B01E` | same |
+| Font | Segoe UI Variable → Segoe UI → system-ui (no bundled font) | |
+| Radius | panel 12, card 10, controls 8 | |
+
+Header: weekday + date on the left; coin balance, level/streak chip and hide button on the right. Tabs are a segmented control with a count of unfinished tasks on Today. A thin progress bar shows "n/m done" above the list. Completed cards show the title struck through with a green check.
+
+---|---|
 | Panel bg | `#FFFFFF` |
 | Card / tab bg | `#666666` |
 | Card text | `#FFFFFF` |

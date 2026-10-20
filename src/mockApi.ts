@@ -17,10 +17,10 @@ export function createMockApi(): Api {
     return { occurrenceId: id, taskId: id, title, details, size, status: "pending", rolloverCount, coins, xp: BASE[size], completedSeq: null };
   };
   let cards: TaskCard[] = [
-    mk("Task 1", "Details", "small"),
-    mk("Task 2", "Details", "medium"),
-    mk("Task 3", "Details", "small", 2),
-    mk("Task 4", "Details", "large"),
+    mk("Review lecture notes", "Chapters 4–5", "small"),
+    mk("Finish DSA practice", "2 problems from the sheet", "medium"),
+    mk("Read 20 pages", "", "small", 2),
+    mk("Gym", "Leg day", "large"),
   ];
   const ordered = () => [
     ...cards.filter((c) => c.status === "pending"),

@@ -52,37 +52,58 @@ export default function App({ api }: { api: Api }) {
   const onReward = (r: CompleteResult) => setBalance(r.balance);
   const onLanded = (r: CompleteResult) => {
     if (r.levelAfter > r.levelBefore) {
-      setBanner(`Level up! LV ${r.levelAfter}`);
+      setBanner(`Level up! You're now level ${r.levelAfter}`);
       window.setTimeout(() => setBanner(null), 2000);
     }
   };
 
+  const cards = state?.cards ?? [];
+  const done = cards.filter((c) => c.status === "completed").length;
+  const progress = { done, total: cards.length, left: cards.length - done };
+  const day = formatDay(state?.today);
+
   return (
     <div className="panel">
       <header className="header" data-tauri-drag-region>
-        <span className="pill" title="Coins">
+        <div className="heading" data-tauri-drag-region>
+          <span className="weekday" data-tauri-drag-region>{day.weekday}</span>
+          <span className="date" data-tauri-drag-region>{day.date}</span>
+        </div>
+        <span className="stat" title="Coins">
           <i className="coin" aria-hidden />
           <CountUp value={balance} />
         </span>
-        <button className="pill" onClick={() => setShowLevel((v) => !v)} title="Level and streak">
-          LV {state?.level ?? 1}
+        <button
+          className={showLevel ? "stat level open" : "stat level"}
+          onClick={() => setShowLevel((v) => !v)}
+          aria-expanded={showLevel}
+          title="Level and streak"
+        >
+          Lv {state?.level ?? 1}
+          {state && state.streak > 0 && <span className="streak">· {state.streak}d</span>}
         </button>
-        <button className="close" onClick={() => api.hideWindow()} aria-label="Hide widget">
+        <button className="icon-btn" onClick={() => api.hideWindow()} aria-label="Hide widget">
           <svg viewBox="0 0 16 16" aria-hidden>
             <path d="M4 4l8 8M12 4l-8 8" />
           </svg>
         </button>
         {showLevel && state && (
           <div className="popover" onClick={() => setShowLevel(false)}>
-            <div>STREAK {state.streak} {state.streak === 1 ? "DAY" : "DAYS"}</div>
-            <div>{state.xp} XP</div>
-            {state.nextLevel ? (
-              <div className="muted">
-                LV {state.nextLevel.level}: {state.nextLevel.xp} XP + {state.nextLevel.streak}-DAY STREAK
-              </div>
-            ) : (
-              <div className="muted">MAX LEVEL</div>
-            )}
+            <div className="pop-row">
+              <span>Streak</span>
+              <strong>
+                {state.streak} {state.streak === 1 ? "day" : "days"}
+              </strong>
+            </div>
+            <div className="pop-row">
+              <span>Lifetime XP</span>
+              <strong>{state.xp}</strong>
+            </div>
+            <div className="pop-note">
+              {state.nextLevel
+                ? `Level ${state.nextLevel.level} needs ${state.nextLevel.xp} XP and a ${state.nextLevel.streak}-day streak.`
+                : "You're at the top level."}
+            </div>
           </div>
         )}
       </header>
@@ -100,9 +121,21 @@ export default function App({ api }: { api: Api }) {
             }}
           >
             {t.label}
+            {t.id === "today" && progress.left > 0 && <span className="badge">{progress.left}</span>}
           </button>
         ))}
       </nav>
+
+      {tab === "today" && !adding && progress.total > 0 && (
+        <div className="progress" aria-label={`${progress.done} of ${progress.total} done`}>
+          <div className="track">
+            <span style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+          </div>
+          <span className="progress-text">
+            {progress.done}/{progress.total} done
+          </span>
+        </div>
+      )}
 
       <main className="body">
         {banner && <div className="banner">{banner}</div>}
@@ -142,4 +175,12 @@ export default function App({ api }: { api: Api }) {
       )}
     </div>
   );
+}
+
+function formatDay(iso?: string) {
+  const d = iso ? new Date(`${iso}T00:00:00`) : new Date();
+  return {
+    weekday: d.toLocaleDateString(undefined, { weekday: "long" }),
+    date: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+  };
 }

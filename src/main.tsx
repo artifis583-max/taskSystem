@@ -1,6 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "@fontsource/lilita-one";
 import "./styles.css";
 import App from "./App";
 import { inTauri, loadApi } from "./api";

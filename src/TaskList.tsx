@@ -179,14 +179,15 @@ export function TaskList({ api, cards, onReward, onLanded, onSettled, onError, o
             }}
           >
             <div className="done-label" aria-hidden>
+              <svg viewBox="0 0 20 16">
+                <path d="M3 8.5l4.5 4.5L17 3.5" />
+              </svg>
               Done
             </div>
             <div className="card">
               {confirmUndo === id ? (
                 <div className="card-text confirm">
-                  <span>
-                    Undo? −{card.coins} coins
-                  </span>
+                  <span>Undo? You'll lose {card.coins} coins.</span>
                   <button className="mini" onClick={() => uncomplete(card)}>
                     Yes
                   </button>
@@ -231,10 +232,16 @@ export function TaskList({ api, cards, onReward, onLanded, onSettled, onError, o
               <span className="meta">
                 {card.rolloverCount > 0 && card.status === "pending" && (
                   <span className="rollover" title={`Carried over ${card.rolloverCount}×`}>
-                    ↻{card.rolloverCount}
+                    <svg viewBox="0 0 16 16" aria-hidden>
+                      <path d="M13 8a5 5 0 1 1-1.5-3.5M13 2.5V5h-2.5" />
+                    </svg>
+                    {card.rolloverCount}
                   </span>
                 )}
-                <span className="reward">+{card.coins}</span>
+                <span className="reward">
+                  <i className="coin" aria-hidden />
+                  {card.coins}
+                </span>
               </span>
               <button
                 className={done ? "check checked" : "check"}

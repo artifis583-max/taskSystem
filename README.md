@@ -56,4 +56,5 @@ Data lives in `%APPDATA%\com.taskwidget.app\data.db`.
 - **Click a card** to skip it for today or remove the task.
 - **Missed tasks** roll over to the next day, worth ×0.8 coins per rollover (min 1).
 - **Close (×)** hides the widget to the tray. Quit from the tray menu.
+- Light or dark theme follows your Windows setting.
 - Turning off Windows animations (Settings → Accessibility → Visual effects) turns off the motion.
