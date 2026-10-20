@@ -158,6 +158,23 @@ export function createMockApi(): Api {
     async setAutostart(v) { await wait(); autostart = v; return autostart; },
     async openDashboard() { window.open("?view=dashboard", "_blank"); },
     onAddTask() { return () => {}; },
+    async backupsInfo() {
+      await wait(30);
+      const mkB = (daysAgo: number, kind: string) => {
+        const d = new Date(Date.now() - daysAgo * 864e5);
+        const stamp = d.toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15);
+        return { name: `taskwidget-${stamp}-${kind}.db`, size: 98304 + daysAgo * 1024, createdAt: d.toISOString(), kind };
+      };
+      return {
+        dataDir: "C:\\Users\\you\\AppData\\Roaming\\com.taskwidget.app",
+        backupsDir: "C:\\Users\\you\\AppData\\Roaming\\com.taskwidget.app\\backups",
+        backups: [mkB(0, "auto"), mkB(1, "auto"), mkB(2, "manual"), mkB(2, "auto"), mkB(3, "auto")],
+      };
+    },
+    async backupNow() { await wait(); return "taskwidget-manual.db"; },
+    async exportBackup() { await wait(); return true; },
+    async restoreBackup() { await wait(); changed(); },
+    async restoreFromFile() { await wait(); return false; },
     onChanged(cb) { listeners.add(cb); return () => listeners.delete(cb); },
     hideWindow() { alert("In the app this hides the widget to the tray."); },
   };

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Api } from "./api";
-import type { AppState, DayInfo, Schedule, Settings, Stats, TaskInfo } from "./types";
+import type { AppState, BackupsInfo, DayInfo, Schedule, Settings, Stats, TaskInfo } from "./types";
 import { AddTaskForm } from "./AddTaskForm";
 import { applyAppearance } from "./motion";
 
@@ -98,7 +98,12 @@ export function Dashboard({ api }: { api: Api }) {
         {page === "tasks" && <TasksPage api={api} tasks={tasks} run={run} />}
         {page === "history" && <HistoryPage history={history} />}
         {page === "progress" && stats && <ProgressPage stats={stats} />}
-        {page === "settings" && state && <SettingsPage api={api} settings={state.settings} run={run} />}
+        {page === "settings" && state && (
+          <>
+            <SettingsPage api={api} settings={state.settings} run={run} />
+            <BackupsSection api={api} run={run} />
+          </>
+        )}
       </main>
     </div>
   );
@@ -434,6 +439,108 @@ function SettingsPage({ api, settings, run }: { api: Api; settings: Settings; ru
           />
         </SettingRow>
       </div>
+    </>
+  );
+}
+
+// ---------- backups ----------
+
+const KIND_LABEL: Record<string, string> = { auto: "Daily", manual: "Manual", "before-restore": "Before restore" };
+const kindLabel = (k: string) => KIND_LABEL[k] ?? (k.startsWith("pre-upgrade") ? "Before update" : k);
+const fmtSize = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
+
+function BackupsSection({ api, run }: { api: Api; run(fn: () => Promise<unknown>): Promise<void> }) {
+  const [info, setInfo] = useState<BackupsInfo | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null); // backup name, or "file"
+  const [note, setNote] = useState<string | null>(null);
+  const reload = useCallback(() => api.backupsInfo().then(setInfo, () => setInfo(null)), [api]);
+  useEffect(() => {
+    reload();
+  }, [reload]);
+  const done = (msg: string) => {
+    setNote(msg);
+    window.setTimeout(() => setNote(null), 3000);
+    reload();
+  };
+
+  return (
+    <>
+      <h2 className="section-title">Backups</h2>
+      <div className="dash-card settings">
+        <SettingRow title="Automatic backups" hint="Made once a day and before any restore or update. The last 7 daily ones are kept.">
+          <button className="mini ghost big" onClick={() => run(async () => (await api.backupNow(), done("Backup saved.")))}>
+            Back up now
+          </button>
+        </SettingRow>
+        <SettingRow title="Export a copy" hint="Save a backup file anywhere, like a USB drive or a cloud folder.">
+          <button className="mini ghost big" onClick={() => run(async () => (await api.exportBackup()) && done("Backup exported."))}>
+            Export…
+          </button>
+        </SettingRow>
+        <SettingRow title="Restore from a file" hint="Replaces all current data. Your current data is backed up first.">
+          {confirm === "file" ? (
+            <div className="inline-confirm">
+              <button className="mini danger big" onClick={() => (setConfirm(null), run(async () => (await api.restoreFromFile()) && done("Backup restored.")))}>
+                Choose file
+              </button>
+              <button className="mini ghost big" onClick={() => setConfirm(null)}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button className="mini ghost big" onClick={() => setConfirm("file")}>
+              Restore…
+            </button>
+          )}
+        </SettingRow>
+        {note && <div className="saved-note">{note}</div>}
+      </div>
+
+      {info && info.backups.length > 0 && (
+        <div className="dash-card table-card">
+          <table className="backups-table">
+            <thead>
+              <tr>
+                <th>Saved</th>
+                <th>Type</th>
+                <th className="num">Size</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {info.backups.map((b) => (
+                <tr key={b.name}>
+                  {confirm === b.name ? (
+                    <td colSpan={4}>
+                      <div className="confirm-row">
+                        <span>Replace all current data with this backup? Your current data is backed up first.</span>
+                        <button className="mini danger" onClick={() => (setConfirm(null), run(async () => (await api.restoreBackup(b.name), done("Backup restored."))))}>
+                          Restore
+                        </button>
+                        <button className="mini ghost" onClick={() => setConfirm(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  ) : (
+                    <>
+                      <td>{new Date(b.createdAt).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</td>
+                      <td className="muted">{kindLabel(b.kind)}</td>
+                      <td className="num muted">{fmtSize(b.size)}</td>
+                      <td className="num">
+                        <button className="mini ghost" onClick={() => setConfirm(b.name)}>
+                          Restore
+                        </button>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {info && <p className="path-note">Your data: <code>{info.dataDir}</code></p>}
     </>
   );
 }

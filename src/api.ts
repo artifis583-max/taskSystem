@@ -1,4 +1,4 @@
-import type { AppState, CompleteResult, DayInfo, NewTask, RewardInput, Settings, Stats, TaskInfo } from "./types";
+import type { AppState, BackupsInfo, CompleteResult, DayInfo, NewTask, RewardInput, Settings, Stats, TaskInfo } from "./types";
 
 export interface Api {
   getState(): Promise<AppState>;
@@ -26,6 +26,14 @@ export interface Api {
   /** Returns the actual state after the change. */
   setAutostart(enabled: boolean): Promise<boolean>;
   openDashboard(): Promise<void>;
+  backupsInfo(): Promise<BackupsInfo>;
+  /** Returns the new backup's file name. */
+  backupNow(): Promise<string>;
+  /** Opens a save dialog. Returns false if cancelled. */
+  exportBackup(): Promise<boolean>;
+  restoreBackup(name: string): Promise<void>;
+  /** Opens a file picker. Returns false if cancelled. */
+  restoreFromFile(): Promise<boolean>;
   /** Tray "Add task" was clicked. */
   onAddTask(cb: () => void): () => void;
   /** Called when data changed (any window) or the date rolled over. */
@@ -61,6 +69,11 @@ async function tauriApi(): Promise<Api> {
     getAutostart: () => invoke("get_autostart"),
     setAutostart: (enabled) => invoke("set_autostart", { enabled }),
     openDashboard: () => invoke("open_dashboard"),
+    backupsInfo: () => invoke("backups_info"),
+    backupNow: () => invoke("backup_now"),
+    exportBackup: () => invoke("export_backup"),
+    restoreBackup: (name) => invoke("restore_backup", { name }),
+    restoreFromFile: () => invoke("restore_from_file"),
     onAddTask(cb) {
       const un = listen("open-add-task", () => cb());
       return () => void un.then((f) => f());

@@ -30,16 +30,23 @@ export default function App({ api }: { api: Api }) {
   const [showLevel, setShowLevel] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Loading failed and there's nothing to show (e.g. the data file couldn't be opened). */
+  const [fatal, setFatal] = useState<string | null>(null);
+  const hasState = useRef(false);
   const errTimer = useRef<number>();
 
   const refresh = useCallback(async () => {
     try {
       const s = await api.getState();
       setState(s);
+      hasState.current = true;
+      setFatal(null);
       latestBalance.current = s.balance;
       if (flying.current === 0) setBalance(s.balance);
     } catch (e) {
-      showError(String(e));
+      // Nothing loaded yet: keep the message on screen. Otherwise a short toast is enough.
+      if (hasState.current) showError(String(e));
+      else setFatal(String(e));
     }
   }, [api]);
 
@@ -202,6 +209,8 @@ export default function App({ api }: { api: Api }) {
                 }
               }}
             />
+          ) : !state && fatal ? (
+            <p className="placeholder fatal">{fatal}</p>
           ) : state ? (
             <>
             {state.revives.brokenDate && (

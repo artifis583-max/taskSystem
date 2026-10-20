@@ -81,10 +81,32 @@ const MIGRATIONS: &[&str] = &[
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
+    open_with_backups(path, None)
+}
+
+/// Open the app database. If an existing database needs a schema upgrade,
+/// a copy is saved to `backups` first.
+pub fn open_with_backups(path: &Path, backups: Option<&Path>) -> rusqlite::Result<Connection> {
     let mut conn = Connection::open(path)?;
     configure(&conn)?;
+    let current = version(&conn)?;
+    if current > MIGRATIONS.len() {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "This data was saved by a newer version of Task Widget. Please update the app.".into(),
+        ));
+    }
+    if current > 0 && current < MIGRATIONS.len() {
+        if let Some(dir) = backups {
+            crate::backup::snapshot(&conn, dir, &format!("pre-upgrade-v{current}"))
+                .map_err(|e| rusqlite::Error::InvalidParameterName(format!("Backup before upgrade failed: {e}")))?;
+        }
+    }
     migrate(&mut conn)?;
     Ok(conn)
+}
+
+pub fn version(conn: &Connection) -> rusqlite::Result<usize> {
+    conn.query_row("PRAGMA user_version", [], |r| r.get(0))
 }
 
 pub fn open_in_memory() -> rusqlite::Result<Connection> {
@@ -98,8 +120,8 @@ fn configure(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA synchronous = NORMAL;")
 }
 
-fn migrate(conn: &mut Connection) -> rusqlite::Result<()> {
-    let current: usize = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+pub(crate) fn migrate(conn: &mut Connection) -> rusqlite::Result<()> {
+    let current = version(conn)?;
     for (i, sql) in MIGRATIONS.iter().enumerate().skip(current) {
         let tx = conn.transaction()?;
         tx.execute_batch(sql)?;

@@ -14,7 +14,7 @@ Full spec: [docs/PLAN.md](docs/PLAN.md).
 | 4. XP, streak, levels | Engine done (level bonus applies to coins); header shows level and streak |
 | 5. Rewards shop + revives | Done |
 | 6. Dashboard, autostart, remember position | Done |
-| 7. Backup/restore, release checks | Not started |
+| 7. Backup/restore, release checks | Backups done. Windows installer build and memory check still need a Windows PC |
 
 ## Run it on Windows
 
@@ -49,9 +49,23 @@ npm run dev                  # preview the UI in a browser at http://localhost:1
 | `src-tauri/src/manage.rs` | Editing/pausing tasks, upcoming days, history, stats |
 | `src-tauri/src/settings.rs` | Settings and saved widget position |
 | `src/Dashboard.tsx` | Dashboard window (Tasks, History, Progress, Settings) |
+| `src-tauri/src/backup.rs` | Backups, rolling cleanup, validated restore |
 | `src/mockApi.ts` | Fake backend for browser preview only (`?view=dashboard` shows the dashboard) |
 
-Data lives in `%APPDATA%\com.taskwidget.app\data.db`.
+Data lives in `%APPDATA%\com.taskwidget.app\data.db`. Backups are in the `backups` folder next to it.
+
+## Backups
+
+- **Automatic:** once a day, before any restore, and before a database upgrade. The newest 7 daily backups are kept.
+- **Dashboard → Settings → Backups:** back up now, export a copy anywhere, restore from the list or from a file.
+- **Restoring** checks the file first (integrity, version, tables). A bad file is rejected and your data is not touched. Your current data is always backed up before a restore.
+- If the data file can't be opened (for example it was saved by a newer version), the app leaves it untouched and shows a message instead of starting fresh.
+
+## Install
+
+`npm run tauri build` makes two installers in `src-tauri/target/release/bundle/`:
+- `nsis/Task Widget_1.0.0_x64-setup.exe` (recommended): installs for your user only, no admin needed.
+- `msi/Task Widget_1.0.0_x64_en-US.msi`
 
 ## How it behaves
 

@@ -1,4 +1,5 @@
 mod commands;
+pub mod backup;
 pub mod config;
 pub mod db;
 pub mod domain;
@@ -49,7 +50,7 @@ static POS_Y: AtomicI32 = AtomicI32::new(0);
 static POS_DIRTY: AtomicBool = AtomicBool::new(false);
 
 fn flush_position(app: &AppHandle) {
-    if POS_DIRTY.swap(false, Ordering::SeqCst) {
+    if POS_DIRTY.swap(false, Ordering::SeqCst) && commands::STARTUP_ERROR.get().is_none() {
         if let Some(db) = app.try_state::<commands::Db>() {
             let c = db.0.lock().unwrap_or_else(|e| e.into_inner());
             let _ = settings::save_widget_position(&c, POS_X.load(Ordering::SeqCst), POS_Y.load(Ordering::SeqCst));
@@ -132,10 +133,22 @@ fn watch_date(app: AppHandle) {
             let now = commands::today();
             if now != last {
                 last = now;
+                daily_backup(&app);
                 let _ = app.emit("state-changed", ());
             }
         }
     });
+}
+
+fn daily_backup(app: &AppHandle) {
+    if commands::STARTUP_ERROR.get().is_some() {
+        return;
+    }
+    let (Some(db), Some(paths)) = (app.try_state::<commands::Db>(), app.try_state::<commands::Paths>()) else { return };
+    let c = db.0.lock().unwrap_or_else(|e| e.into_inner());
+    if let Err(e) = backup::auto_if_due(&c, &paths.backups) {
+        eprintln!("daily backup failed: {e}");
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -143,12 +156,28 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_widget(app)))
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
-            let conn = db::open(&dir.join("data.db"))?;
-            let prefs = settings::load(&conn)?;
-            let saved_pos = settings::widget_position(&conn)?;
+            let backups = dir.join("backups");
+            let conn = match db::open_with_backups(&dir.join("data.db"), Some(&backups)) {
+                Ok(c) => c,
+                Err(e) => {
+                    // Leave the file alone; the UI shows this message and every command refuses to run.
+                    let _ = commands::STARTUP_ERROR.set(e.to_string());
+                    rusqlite::Connection::open_in_memory()?
+                }
+            };
+            if commands::STARTUP_ERROR.get().is_none() {
+                if let Err(e) = backup::auto_if_due(&conn, &backups) {
+                    eprintln!("daily backup failed: {e}");
+                }
+            }
+            app.manage(commands::Paths { data_dir: dir.clone(), backups });
+            let healthy = commands::STARTUP_ERROR.get().is_none();
+            let prefs = if healthy { settings::load(&conn)? } else { settings::Settings::default() };
+            let saved_pos = if healthy { settings::widget_position(&conn)? } else { None };
             app.manage(commands::Db(Mutex::new(conn)));
             build_tray(app.handle())?;
             if let Some(w) = app.get_webview_window("widget") {
@@ -200,6 +229,11 @@ pub fn run() {
             commands::get_autostart,
             commands::set_autostart,
             commands::open_dashboard,
+            commands::backups_info,
+            commands::backup_now,
+            commands::export_backup,
+            commands::restore_backup,
+            commands::restore_from_file,
         ])
         .build(tauri::generate_context!())
         .expect("error while starting Task Widget")

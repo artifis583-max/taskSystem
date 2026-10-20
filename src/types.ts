@@ -74,6 +74,19 @@ export interface DayInfo {
   streakAfter: number;
 }
 
+export interface BackupFile {
+  name: string;
+  size: number;
+  createdAt: string;
+  kind: string;
+}
+
+export interface BackupsInfo {
+  dataDir: string;
+  backupsDir: string;
+  backups: BackupFile[];
+}
+
 export interface Stats {
   level: number;
   xp: number;
