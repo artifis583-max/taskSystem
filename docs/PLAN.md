@@ -88,7 +88,7 @@ Uses the FLIP technique (measure → reorder DOM → invert with transform → p
 | # | Step | What the user sees | Time |
 |---|---|---|---|
 | 1 | **Tick** | Checkbox fills green with a check. The `complete_occurrence` command is called right away. | 100 ms |
-| 2 | **Swipe left + bounce** | Card content slides left ~65% of its width with a small overshoot, uncovering a green **DONE** label on the right. | 300 ms |
+| 2 | **Swipe left + bounce** | Card slides left ~33% of its width (as in the mockup); its text fades with a small overshoot, uncovering a green **DONE** label on the right. | 300 ms |
 | 3 | **Hold** | Card stays in the DONE state so the user sees it. Coin pill counts up to the new balance and pulses once. | 350 ms |
 | 4 | **Move to bottom** | Card slides back to full width and moves to the last position. Cards below slide up to fill the gap. | 350 ms |
 | 5 | **Land + bounce** | Card lands at the bottom with a small vertical bounce (overshoot ~6 px, settle). | 250 ms |
