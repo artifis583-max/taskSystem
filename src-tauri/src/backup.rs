@@ -180,7 +180,7 @@ mod tests {
     }
     fn seeded(path: &Path) -> Connection {
         let mut c = db::open(path).unwrap();
-        create_task(&mut c, day(), NewTask { title: "Read".into(), details: String::new(), size: Size::Small, schedule: Schedule::Daily, start_date: None }).unwrap();
+        create_task(&mut c, day(), NewTask { title: "Read".into(), details: String::new(), size: Size::Small, schedule: Schedule::Daily, start_date: None, end_date: None }).unwrap();
         let occ = get_state(&mut c, day()).unwrap().cards[0].occurrence_id;
         complete_occurrence(&mut c, day(), "op", occ).unwrap();
         c

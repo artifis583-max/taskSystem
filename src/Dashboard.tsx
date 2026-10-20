@@ -174,7 +174,7 @@ function TasksPage({ api, tasks, run }: { api: Api; tasks: TaskInfo[]; run(fn: (
                     </span>
                     {t.details && <span className="details">{t.details}</span>}
                   </div>
-                  <span className="sched">{scheduleLabel(t.schedule, t.startDate)}</span>
+                  <span className="sched">{scheduleLabel(t.schedule, t.startDate, t.endDate)}</span>
                   <span className={`size-tag ${t.size}`}>{t.size}</span>
                   <div className="row-actions">
                     <button className="mini ghost" onClick={() => setEditing(t)}>
@@ -203,10 +203,12 @@ function TasksPage({ api, tasks, run }: { api: Api; tasks: TaskInfo[]; run(fn: (
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const shortDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
-export function scheduleLabel(s: Schedule, start: string): string {
+export function scheduleLabel(s: Schedule, start: string, end: string | null = null): string {
   const today = new Date();
   const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const from = start > todayIso ? ` · from ${shortDate(start)}` : "";
+  const from =
+    (start > todayIso ? ` · from ${shortDate(start)}` : "") +
+    (end ? (end < todayIso ? ` · ended ${shortDate(end)}` : ` · until ${shortDate(end)}`) : "");
   switch (s.kind) {
     case "once":
       return `Once · ${shortDate(start)}`;

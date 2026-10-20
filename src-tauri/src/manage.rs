@@ -20,13 +20,14 @@ pub struct TaskInfo {
     pub size: Size,
     pub schedule: Schedule,
     pub start_date: String,
+    pub end_date: Option<String>,
     pub status: String,
 }
 
 /// Active and paused tasks, in list order. Archived tasks are hidden.
 pub fn list_tasks(c: &Connection) -> Result<Vec<TaskInfo>> {
     let mut stmt = c.prepare(
-        "SELECT id, title, details, size, schedule_json, start_date, status FROM tasks
+        "SELECT id, title, details, size, schedule_json, start_date, status, end_date FROM tasks
          WHERE status != 'archived' ORDER BY status = 'paused', sort_order, id",
     )?;
     let rows = stmt
@@ -40,6 +41,7 @@ pub fn list_tasks(c: &Connection) -> Result<Vec<TaskInfo>> {
                 size: Size::parse(&size).unwrap_or(Size::Small),
                 schedule: serde_json::from_str(&sched).unwrap_or(Schedule::Once),
                 start_date: r.get(5)?,
+                end_date: r.get(7)?,
                 status: r.get(6)?,
             })
         })?
@@ -49,14 +51,16 @@ pub fn list_tasks(c: &Connection) -> Result<Vec<TaskInfo>> {
 
 /// Edit a task. Changes apply to future days; completed history and awarded coins stay as they were.
 pub fn update_task(conn: &mut Connection, today: NaiveDate, id: i64, t: NewTask) -> Result<()> {
-    let old: Option<String> = conn
-        .query_row("SELECT start_date FROM tasks WHERE id = ?1 AND status != 'archived'", [id], |r| r.get(0))
+    let old: Option<(String, Option<String>)> = conn
+        .query_row("SELECT start_date, end_date FROM tasks WHERE id = ?1 AND status != 'archived'", [id], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
         .optional()?;
-    let Some(old) = old else { return rule("Task not found.") };
-    let v = validate_task(&t, today, Some(pd(&old)?))?;
+    let Some((old_start, old_end)) = old else { return rule("Task not found.") };
+    let v = validate_task(&t, today, Some(pd(&old_start)?), old_end.as_deref().map(pd).transpose()?)?;
     conn.execute(
-        "UPDATE tasks SET title = ?2, details = ?3, size = ?4, schedule_json = ?5, start_date = ?6 WHERE id = ?1",
-        params![id, v.title, v.details, t.size.as_str(), v.schedule_json, ds(v.start)],
+        "UPDATE tasks SET title = ?2, details = ?3, size = ?4, schedule_json = ?5, start_date = ?6, end_date = ?7 WHERE id = ?1",
+        params![id, v.title, v.details, t.size.as_str(), v.schedule_json, ds(v.start), v.end.map(ds)],
     )?;
     sync_day(conn, today)?;
     Ok(())
@@ -102,7 +106,8 @@ pub fn upcoming(c: &Connection, today: NaiveDate, days: i64) -> Result<Vec<Upcom
         let d = today + Duration::days(i);
         let mut items = Vec::new();
         for t in tasks.iter().filter(|t| t.status == "active") {
-            if t.schedule.occurs_on(pd(&t.start_date)?, None, d) {
+            let end = t.end_date.as_deref().map(pd).transpose()?;
+            if t.schedule.occurs_on(pd(&t.start_date)?, end, d) {
                 items.push(UpcomingItem { task_id: t.id, title: t.title.clone(), details: t.details.clone(), size: t.size });
             }
         }
@@ -196,7 +201,7 @@ mod tests {
         NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap()
     }
     fn nt(title: &str, schedule: Schedule, start: Option<&str>) -> NewTask {
-        NewTask { title: title.into(), details: String::new(), size: Size::Small, schedule, start_date: start.map(String::from) }
+        NewTask { title: title.into(), details: String::new(), size: Size::Small, schedule, start_date: start.map(String::from), end_date: None }
     }
 
     #[test]
@@ -280,5 +285,44 @@ mod tests {
         assert_eq!(st.levels.len(), 7);
         let h = history(&c, 10).unwrap();
         assert_eq!(h.iter().map(|x| x.result.as_str()).collect::<Vec<_>>(), ["broken", "qualified"]);
+    }
+
+    #[test]
+    fn end_date_stops_repeating_tasks() {
+        let mut c = db::open_in_memory().unwrap();
+        let mon = d("2026-10-19");
+        let mut t = nt("Exam prep", Schedule::Daily, None);
+        t.end_date = Some("2026-10-21".into());
+        let id = create_task(&mut c, mon, t).unwrap();
+        let up = upcoming(&c, mon, 4).unwrap();
+        let counts: Vec<usize> = up.iter().map(|x| x.items.len()).collect();
+        assert_eq!(counts, [1, 1, 0, 0]); // Tue, Wed yes; Thu, Fri no
+        // Do Tue and Wed; on Thu nothing new appears.
+        for day in ["2026-10-19", "2026-10-20", "2026-10-21"] {
+            let occ = get_state(&mut c, d(day)).unwrap().cards[0].occurrence_id;
+            complete_occurrence(&mut c, d(day), day, occ).unwrap();
+        }
+        assert!(get_state(&mut c, d("2026-10-22")).unwrap().cards.is_empty());
+        assert_eq!(list_tasks(&c).unwrap()[0].end_date.as_deref(), Some("2026-10-21"));
+        // Editing later can keep the past end date, but can't set a new past one.
+        let mut keep = nt("Exam prep", Schedule::Daily, Some("2026-10-19"));
+        keep.end_date = Some("2026-10-21".into());
+        update_task(&mut c, d("2026-10-25"), id, keep).unwrap();
+        let mut bad = nt("Exam prep", Schedule::Daily, Some("2026-10-19"));
+        bad.end_date = Some("2026-10-22".into());
+        assert!(update_task(&mut c, d("2026-10-25"), id, bad).is_err());
+    }
+
+    #[test]
+    fn end_before_start_rejected_and_ignored_for_once() {
+        let mut c = db::open_in_memory().unwrap();
+        let mon = d("2026-10-19");
+        let mut t = nt("X", Schedule::Daily, Some("2026-10-25"));
+        t.end_date = Some("2026-10-24".into());
+        assert!(create_task(&mut c, mon, t).is_err());
+        let mut once = nt("Once", Schedule::Once, None);
+        once.end_date = Some("2026-10-01".into());
+        create_task(&mut c, mon, once).unwrap();
+        assert_eq!(list_tasks(&c).unwrap()[0].end_date, None);
     }
 }

@@ -628,3 +628,4 @@ html.widget .form { padding: 12px 14px; gap: 9px; }
 html.widget .form input { padding: 7px 10px; font-size: 13px; }
 html.widget .seg button { padding: 5px 4px; font-size: 12px; }
 html.widget .placeholder { margin: 32px 20px; }
+.field-error { color: var(--danger); font-size: 12px; font-weight: 500; }

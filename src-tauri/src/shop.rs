@@ -272,7 +272,7 @@ mod tests {
     }
 
     fn task(c: &mut Connection, today: NaiveDate, title: &str) {
-        create_task(c, today, NewTask { title: title.into(), details: String::new(), size: Size::Small, schedule: Schedule::Once, start_date: None })
+        create_task(c, today, NewTask { title: title.into(), details: String::new(), size: Size::Small, schedule: Schedule::Once, start_date: None, end_date: None })
             .unwrap();
     }
 

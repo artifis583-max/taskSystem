@@ -52,6 +52,9 @@ pub struct NewTask {
     pub size: Size,
     pub schedule: Schedule,
     pub start_date: Option<String>,
+    /// Last day a repeating task appears (inclusive). None = no end. Ignored for one-time tasks.
+    #[serde(default)]
+    pub end_date: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -300,10 +303,16 @@ pub(crate) struct ValidTask {
     pub details: String,
     pub schedule_json: String,
     pub start: NaiveDate,
+    pub end: Option<NaiveDate>,
 }
 
-/// `old_start` is the task's current start date when editing; keeping it is always allowed.
-pub(crate) fn validate_task(t: &NewTask, today: NaiveDate, old_start: Option<NaiveDate>) -> Result<ValidTask> {
+/// `old_start` / `old_end` are the task's current dates when editing; keeping them is always allowed.
+pub(crate) fn validate_task(
+    t: &NewTask,
+    today: NaiveDate,
+    old_start: Option<NaiveDate>,
+    old_end: Option<NaiveDate>,
+) -> Result<ValidTask> {
     let title = t.title.trim();
     let len = title.chars().count();
     if len == 0 || len > 120 {
@@ -326,23 +335,36 @@ pub(crate) fn validate_task(t: &NewTask, today: NaiveDate, old_start: Option<Nai
     if (start - today).num_days() > 5 * 366 {
         return rule("Start date is too far away.");
     }
+    let end = match (&t.schedule, &t.end_date) {
+        (Schedule::Once, _) | (_, None) => None,
+        (_, Some(s)) => Some(pd(s)?),
+    };
+    if let Some(e) = end {
+        if e < start {
+            return rule("End date can't be before the start date.");
+        }
+        if e < today && Some(e) != old_end {
+            return rule("End date can't be in the past.");
+        }
+    }
     Ok(ValidTask {
         title: title.to_string(),
         details: details.to_string(),
         schedule_json: serde_json::to_string(&t.schedule).expect("schedule serializes"),
         start,
+        end,
     })
 }
 
 pub fn create_task(conn: &mut Connection, today: NaiveDate, t: NewTask) -> Result<i64> {
-    let v = validate_task(&t, today, None)?;
+    let v = validate_task(&t, today, None, None)?;
     let id = {
         let tx = conn.transaction()?;
         let order: i64 = tx.query_row("SELECT COALESCE(MAX(sort_order),0)+1 FROM tasks", [], |r| r.get(0))?;
         tx.execute(
-            "INSERT INTO tasks (title, details, size, schedule_json, start_date, sort_order, created_at)
-             VALUES (?1,?2,?3,?4,?5,?6,?7)",
-            params![v.title, v.details, t.size.as_str(), v.schedule_json, ds(v.start), order, now_utc()],
+            "INSERT INTO tasks (title, details, size, schedule_json, start_date, end_date, sort_order, created_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8)",
+            params![v.title, v.details, t.size.as_str(), v.schedule_json, ds(v.start), v.end.map(ds), order, now_utc()],
         )?;
         let id = tx.last_insert_rowid();
         tx.commit()?;
@@ -482,7 +504,7 @@ mod tests {
     const DAY0: &str = "2026-10-19";
 
     fn add(conn: &mut Connection, today: NaiveDate, title: &str, size: Size, schedule: Schedule) -> i64 {
-        create_task(conn, today, NewTask { title: title.into(), details: String::new(), size, schedule, start_date: None }).unwrap()
+        create_task(conn, today, NewTask { title: title.into(), details: String::new(), size, schedule, start_date: None, end_date: None }).unwrap()
     }
 
     fn count(conn: &Connection, sql: &str) -> i64 {
@@ -641,7 +663,7 @@ mod tests {
     fn title_validation() {
         let mut c = db::open_in_memory().unwrap();
         let t = d(DAY0);
-        let bad = |title: String| NewTask { title, details: String::new(), size: Size::Small, schedule: Schedule::Once, start_date: None };
+        let bad = |title: String| NewTask { title, details: String::new(), size: Size::Small, schedule: Schedule::Once, start_date: None, end_date: None };
         assert!(create_task(&mut c, t, bad("   ".into())).is_err());
         assert!(create_task(&mut c, t, bad("x".repeat(121))).is_err());
         assert!(create_task(&mut c, t, bad("x".repeat(120))).is_ok());

@@ -26,12 +26,12 @@ export function createMockApi(): Api {
   let autostart = false;
   const iso = (offset: number) => new Date(Date.now() + offset * 864e5).toISOString().slice(0, 10);
   let tasks: TaskInfo[] = [
-    { id: 1, title: "Review lecture notes", details: "Chapters 4–5", size: "small", schedule: { kind: "weekdays", days: [0, 1, 2, 3, 4] }, startDate: iso(-20), status: "active" },
-    { id: 2, title: "Finish DSA practice", details: "2 problems from the sheet", size: "medium", schedule: { kind: "daily" }, startDate: iso(-30), status: "active" },
-    { id: 3, title: "Read 20 pages", details: "", size: "small", schedule: { kind: "every_n_days", n: 2 }, startDate: iso(-10), status: "active" },
-    { id: 4, title: "Gym", details: "Leg day", size: "large", schedule: { kind: "weekdays", days: [0, 2, 4] }, startDate: iso(-30), status: "active" },
-    { id: 5, title: "Dentist", details: "4:30 pm", size: "small", schedule: { kind: "once" }, startDate: iso(2), status: "active" },
-    { id: 6, title: "Guitar practice", details: "", size: "medium", schedule: { kind: "daily" }, startDate: iso(-40), status: "paused" },
+    { id: 1, title: "Review lecture notes", details: "Chapters 4–5", size: "small", schedule: { kind: "weekdays", days: [0, 1, 2, 3, 4] }, startDate: iso(-20), endDate: null, status: "active" },
+    { id: 2, title: "Finish DSA practice", details: "2 problems from the sheet", size: "medium", schedule: { kind: "daily" }, startDate: iso(-30), endDate: iso(40), status: "active" },
+    { id: 3, title: "Read 20 pages", details: "", size: "small", schedule: { kind: "every_n_days", n: 2 }, startDate: iso(-10), endDate: null, status: "active" },
+    { id: 4, title: "Gym", details: "Leg day", size: "large", schedule: { kind: "weekdays", days: [0, 2, 4] }, startDate: iso(-30), endDate: null, status: "active" },
+    { id: 5, title: "Dentist", details: "4:30 pm", size: "small", schedule: { kind: "once" }, startDate: iso(2), endDate: null, status: "active" },
+    { id: 6, title: "Guitar practice", details: "", size: "medium", schedule: { kind: "daily" }, startDate: iso(-40), endDate: null, status: "paused" },
   ];
   const results: DayInfo["result"][] = ["broken", "qualified", "qualified", "qualified", "revived", "qualified", "qualified", "neutral", "qualified", "qualified", "broken", "qualified", "qualified", "qualified"];
   let run = 0;
@@ -94,7 +94,7 @@ export function createMockApi(): Api {
       await wait();
       const c = mk(t.title.trim(), t.details.trim(), t.size);
       cards.push(c);
-      tasks.push({ id: c.taskId + 100, title: c.title, details: c.details, size: t.size, schedule: t.schedule, startDate: t.startDate ?? iso(0), status: "active" });
+      tasks.push({ id: c.taskId + 100, title: c.title, details: c.details, size: t.size, schedule: t.schedule, startDate: t.startDate ?? iso(0), endDate: t.endDate ?? null, status: "active" });
       changed(); return c.taskId;
     },
     async complete(opId, id) {
@@ -143,7 +143,7 @@ export function createMockApi(): Api {
       changed(); return balance;
     },
     async listTasks() { await wait(30); return structuredClone(tasks); },
-    async updateTask(id, t) { await wait(); tasks = tasks.map((x) => (x.id === id ? { ...x, ...t, startDate: t.startDate ?? x.startDate } : x)); changed(); },
+    async updateTask(id, t) { await wait(); tasks = tasks.map((x) => (x.id === id ? { ...x, ...t, startDate: t.startDate ?? x.startDate, endDate: t.endDate ?? null } : x)); changed(); },
     async setTaskStatus(id, status) { await wait(); tasks = tasks.map((x) => (x.id === id ? { ...x, status } : x)); changed(); },
     async getHistory() { await wait(30); return structuredClone(history); },
     async getStats() {

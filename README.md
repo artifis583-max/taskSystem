@@ -74,6 +74,7 @@ Data lives in `%APPDATA%\com.taskwidget.app\data.db`. Backups are in the `backup
 - **Tick a task:** checkbox turns green, the card slides left and shows DONE, the coin count goes up, then the card moves to the bottom with a bounce.
 - **Undo:** tap a green checkbox and confirm. Works until the day is closed, and only if you haven't spent the coins.
 - **Upcoming tab:** what's planned for the next 7 days. New tasks can start today, tomorrow, or on a date you pick.
+- **End dates:** repeating tasks can end on a date (inclusive). After that day they stop appearing; the dashboard shows "until ..." or "ended ...".
 - **Click a card** to skip it for today or remove the task.
 - **Missed tasks** roll over to the next day, worth ×0.8 coins per rollover (min 1).
 - **Rewards tab:** make your own rewards and spend coins on them (with a confirm step). Coins can never go below zero.

@@ -14,6 +14,8 @@ export interface NewTask {
   size: Size;
   schedule: Schedule;
   startDate?: string;
+  /** Last day a repeating task appears (inclusive). Omit for no end. */
+  endDate?: string | null;
 }
 
 export interface TaskCard {
@@ -63,6 +65,7 @@ export interface TaskInfo {
   size: Size;
   schedule: Schedule;
   startDate: string;
+  endDate: string | null;
   status: "active" | "paused";
 }
 

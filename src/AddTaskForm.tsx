@@ -4,6 +4,13 @@ import type { NewTask, Schedule, Size, TaskInfo } from "./types";
 const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 type Repeat = Schedule["kind"];
 type Start = "today" | "tomorrow" | "date";
+type Ends = "never" | "date";
+
+function addDays(iso: string, n: number) {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 function isoDay(offset = 0) {
   const d = new Date();
@@ -28,12 +35,16 @@ export function AddTaskForm({ initial, onSave, onCancel }: Props) {
   const initialStart: Start = !initial || initial.startDate === isoDay() ? "today" : initial.startDate === isoDay(1) ? "tomorrow" : "date";
   const [start, setStart] = useState<Start>(initialStart);
   const [date, setDate] = useState(initial?.startDate ?? isoDay(2));
+  const [ends, setEnds] = useState<Ends>(initial?.endDate ? "date" : "never");
+  const [endDate, setEndDate] = useState(initial?.endDate ?? addDays(isoDay(), 30));
   const [saving, setSaving] = useState(false);
 
   const schedule: Schedule =
     repeat === "weekdays" ? { kind: "weekdays", days } : repeat === "every_n_days" ? { kind: "every_n_days", n } : { kind: repeat };
   const startDate = start === "today" ? isoDay() : start === "tomorrow" ? isoDay(1) : date;
-  const valid = title.trim().length > 0 && (repeat !== "weekdays" || days.length > 0) && /^\d{4}-\d{2}-\d{2}$/.test(startDate);
+  const hasEnd = repeat !== "once" && ends === "date";
+  const endOk = !hasEnd || (/^\d{4}-\d{2}-\d{2}$/.test(endDate) && endDate >= startDate);
+  const valid = title.trim().length > 0 && (repeat !== "weekdays" || days.length > 0) && /^\d{4}-\d{2}-\d{2}$/.test(startDate) && endOk;
 
   return (
     <form
@@ -44,7 +55,14 @@ export function AddTaskForm({ initial, onSave, onCancel }: Props) {
         setSaving(true);
         // When editing, keep a past start date as it was.
         const keepStart = initial && start === "date" && date === initial.startDate;
-        await onSave({ title, details, size, schedule, startDate: keepStart ? initial.startDate : startDate });
+        await onSave({
+          title,
+          details,
+          size,
+          schedule,
+          startDate: keepStart ? initial.startDate : startDate,
+          endDate: hasEnd ? endDate : null,
+        });
         setSaving(false);
       }}
     >
@@ -123,6 +141,37 @@ export function AddTaskForm({ initial, onSave, onCancel }: Props) {
           <input type="date" value={date} min={initial?.startDate && initial.startDate < isoDay() ? initial.startDate : isoDay()} onChange={(e) => setDate(e.target.value)} />
         )}
       </div>
+      {repeat !== "once" && (
+        <div className="field">
+          Ends
+          <div className="seg">
+            {(
+              [
+                ["never", "Never"],
+                ["date", "On a date"],
+              ] as [Ends, string][]
+            ).map(([k, label]) => (
+              <button
+                type="button"
+                key={k}
+                className={ends === k ? "on" : ""}
+                onClick={() => {
+                  setEnds(k);
+                  if (k === "date" && endDate < startDate) setEndDate(addDays(startDate, 30));
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {ends === "date" && (
+            <>
+              <input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} />
+              {!endOk && <span className="field-error">End date must be on or after the start date.</span>}
+            </>
+          )}
+        </div>
+      )}
       <div className="form-actions">
         <button type="button" className="mini ghost" onClick={onCancel}>
           Cancel
