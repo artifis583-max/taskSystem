@@ -109,3 +109,69 @@ pub fn redeem_reward(app: AppHandle, db: State<Db>, op_id: String, id: i64) -> R
     changed(&app);
     Ok(b)
 }
+
+// ---------- phase 6: dashboard and settings ----------
+
+use crate::manage::{self, DayInfo, Stats, TaskInfo};
+use crate::settings::{self, Settings};
+use tauri::Manager;
+use tauri_plugin_autostart::ManagerExt;
+
+#[tauri::command]
+pub fn list_tasks(db: State<Db>) -> R<Vec<TaskInfo>> {
+    manage::list_tasks(&db.lock())
+}
+
+#[tauri::command]
+pub fn update_task(app: AppHandle, db: State<Db>, id: i64, task: NewTask) -> R<()> {
+    manage::update_task(&mut db.lock(), today(), id, task)?;
+    changed(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_task_status(app: AppHandle, db: State<Db>, id: i64, status: String) -> R<()> {
+    manage::set_task_status(&mut db.lock(), today(), id, &status)?;
+    changed(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_history(db: State<Db>) -> R<Vec<DayInfo>> {
+    let mut c = db.lock();
+    service::sync_day(&mut c, today())?;
+    manage::history(&c, 120)
+}
+
+#[tauri::command]
+pub fn get_stats(db: State<Db>) -> R<Stats> {
+    manage::stats(&mut db.lock(), today())
+}
+
+#[tauri::command]
+pub fn update_settings(app: AppHandle, db: State<Db>, settings: Settings) -> R<()> {
+    settings::save(&mut db.lock(), &settings)?;
+    if let Some(w) = app.get_webview_window("widget") {
+        let _ = w.set_always_on_top(settings.always_on_top);
+    }
+    changed(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_autostart(app: AppHandle) -> bool {
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
+#[tauri::command]
+pub fn set_autostart(app: AppHandle, enabled: bool) -> R<bool> {
+    let al = app.autolaunch();
+    let res = if enabled { al.enable() } else { al.disable() };
+    res.map_err(|e| AppError::Rule(format!("Couldn't change the startup setting: {e}")))?;
+    Ok(al.is_enabled().unwrap_or(false))
+}
+
+#[tauri::command]
+pub fn open_dashboard(app: AppHandle) -> R<()> {
+    crate::open_dashboard(&app).map_err(|e| AppError::Rule(format!("Couldn't open the dashboard: {e}")))
+}

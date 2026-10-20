@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CoinFly, type Flight } from "./CoinFly";
-import { prefersReducedMotion } from "./motion";
+import { applyAppearance, prefersReducedMotion } from "./motion";
 import type { Api } from "./api";
 import type { AppState, CompleteResult } from "./types";
 import { CountUp } from "./CountUp";
@@ -48,6 +48,19 @@ export default function App({ api }: { api: Api }) {
     window.clearTimeout(errTimer.current);
     errTimer.current = window.setTimeout(() => setError(null), 3500);
   }
+
+  useEffect(() => {
+    if (state) applyAppearance(state.settings.theme, state.settings.motion);
+  }, [state?.settings.theme, state?.settings.motion]);
+
+  useEffect(
+    () =>
+      api.onAddTask(() => {
+        setTab("today");
+        setAdding(true);
+      }),
+    [api],
+  );
 
   useEffect(() => {
     refresh();
@@ -110,7 +123,15 @@ export default function App({ api }: { api: Api }) {
           Lv {state?.level ?? 1}
           {state && state.streak > 0 && <span className="streak">· {state.streak}d</span>}
         </button>
-        <button className="icon-btn" onClick={() => api.hideWindow()} aria-label="Hide widget">
+        <button className="icon-btn" onClick={() => api.openDashboard().catch((e) => showError(String(e)))} aria-label="Open dashboard" title="Dashboard">
+          <svg viewBox="0 0 16 16" aria-hidden className="grid-icon">
+            <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" />
+            <rect x="9" y="2.5" width="4.5" height="4.5" rx="1" />
+            <rect x="2.5" y="9" width="4.5" height="4.5" rx="1" />
+            <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
+          </svg>
+        </button>
+        <button className="icon-btn" onClick={() => api.hideWindow()} aria-label="Hide widget" title="Hide to tray">
           <svg viewBox="0 0 16 16" aria-hidden>
             <path d="M4 4l8 8M12 4l-8 8" />
           </svg>

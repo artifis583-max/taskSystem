@@ -13,7 +13,7 @@ Full spec: [docs/PLAN.md](docs/PLAN.md).
 | 3. Days + rollover (weekday / every-N schedules, ×0.8 penalty, skip, remove) | Done |
 | 4. XP, streak, levels | Engine done (level bonus applies to coins); header shows level and streak |
 | 5. Rewards shop + revives | Done |
-| 6. Dashboard, autostart, remember position | Not started |
+| 6. Dashboard, autostart, remember position | Done |
 | 7. Backup/restore, release checks | Not started |
 
 ## Run it on Windows
@@ -46,7 +46,10 @@ npm run dev                  # preview the UI in a browser at http://localhost:1
 | `src-tauri/src/db.rs` | SQLite schema and migrations |
 | `src-tauri/src/lib.rs` | Window placement, tray, date watcher |
 | `src/TaskList.tsx` | Task cards and the complete → swipe → DONE → move-to-bottom animation |
-| `src/mockApi.ts` | Fake backend for browser preview only |
+| `src-tauri/src/manage.rs` | Editing/pausing tasks, upcoming days, history, stats |
+| `src-tauri/src/settings.rs` | Settings and saved widget position |
+| `src/Dashboard.tsx` | Dashboard window (Tasks, History, Progress, Settings) |
+| `src/mockApi.ts` | Fake backend for browser preview only (`?view=dashboard` shows the dashboard) |
 
 Data lives in `%APPDATA%\com.taskwidget.app\data.db`.
 
@@ -59,6 +62,10 @@ Data lives in `%APPDATA%\com.taskwidget.app\data.db`.
 - **Missed tasks** roll over to the next day, worth ×0.8 coins per rollover (min 1).
 - **Rewards tab:** make your own rewards and spend coins on them (with a confirm step). Coins can never go below zero.
 - **Revives:** if yesterday broke your streak, you can revive it today only. One free revive per week (refills Monday), extra ones cost 100 coins.
+- **Dashboard** (grid button in the widget, or the tray): edit, pause and remove tasks; see day-by-day history and progress toward the next level; settings.
+- **Settings:** start with Windows (off by default, no admin needed), keep the widget on top, theme (system/light/dark), animations (system/on/off).
+- The widget remembers where you dragged it. If that spot is off-screen (for example a monitor was unplugged), it goes back to the bottom-right corner.
+- **Tray menu:** Show widget, Open dashboard, Add task, Quit.
 - **Close (×)** hides the widget to the tray. Quit from the tray menu.
 - Light or dark theme follows your Windows setting.
 - Turning off Windows animations (Settings → Accessibility → Visual effects) turns off the motion.

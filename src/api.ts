@@ -1,4 +1,4 @@
-import type { AppState, CompleteResult, NewTask, RewardInput } from "./types";
+import type { AppState, CompleteResult, DayInfo, NewTask, RewardInput, Settings, Stats, TaskInfo } from "./types";
 
 export interface Api {
   getState(): Promise<AppState>;
@@ -16,6 +16,18 @@ export interface Api {
   archiveReward(id: number): Promise<void>;
   /** Returns the new balance. */
   redeemReward(opId: string, id: number): Promise<number>;
+  listTasks(): Promise<TaskInfo[]>;
+  updateTask(id: number, task: NewTask): Promise<void>;
+  setTaskStatus(id: number, status: "active" | "paused"): Promise<void>;
+  getHistory(): Promise<DayInfo[]>;
+  getStats(): Promise<Stats>;
+  updateSettings(settings: Settings): Promise<void>;
+  getAutostart(): Promise<boolean>;
+  /** Returns the actual state after the change. */
+  setAutostart(enabled: boolean): Promise<boolean>;
+  openDashboard(): Promise<void>;
+  /** Tray "Add task" was clicked. */
+  onAddTask(cb: () => void): () => void;
   /** Called when data changed (any window) or the date rolled over. */
   onChanged(cb: () => void): () => void;
   hideWindow(): void;
@@ -40,6 +52,19 @@ async function tauriApi(): Promise<Api> {
     updateReward: (id, reward) => invoke("update_reward", { id, reward }),
     archiveReward: (id) => invoke("archive_reward", { id }),
     redeemReward: (opId, id) => invoke("redeem_reward", { opId, id }),
+    listTasks: () => invoke("list_tasks"),
+    updateTask: (id, task) => invoke("update_task", { id, task }),
+    setTaskStatus: (id, status) => invoke("set_task_status", { id, status }),
+    getHistory: () => invoke("get_history"),
+    getStats: () => invoke("get_stats"),
+    updateSettings: (settings) => invoke("update_settings", { settings }),
+    getAutostart: () => invoke("get_autostart"),
+    setAutostart: (enabled) => invoke("set_autostart", { enabled }),
+    openDashboard: () => invoke("open_dashboard"),
+    onAddTask(cb) {
+      const un = listen("open-add-task", () => cb());
+      return () => void un.then((f) => f());
+    },
     onChanged(cb) {
       const un = listen("state-changed", () => cb());
       return () => void un.then((f) => f());

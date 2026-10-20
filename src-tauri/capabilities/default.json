@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Widget window: app commands, events, and dragging only.",
-  "windows": ["widget"],
+  "description": "App windows: app commands, events, and widget dragging only.",
+  "windows": ["widget", "dashboard"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
