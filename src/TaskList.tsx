@@ -8,7 +8,8 @@ type Phase = "ticked" | "swiped" | "landing";
 interface Props {
   api: Api;
   cards: TaskCard[];
-  onReward(r: CompleteResult): void;
+  /** Coins were saved; `from` is where on screen the coin chip starts its flight. */
+  onReward(r: CompleteResult, from: DOMRect | null): void;
   onLanded(r: CompleteResult): void;
   /** All animations finished — safe to reload from the backend. */
   onSettled(): void;
@@ -115,7 +116,7 @@ export function TaskList({ api, cards, onReward, onLanded, onSettled, onError, o
       settleIfIdle();
       return;
     }
-    onReward(result);
+    onReward(result, nodes.current.get(id)?.querySelector(".check")?.getBoundingClientRect() ?? null);
     if (!reduce) await sleep(Math.max(0, started + T.tick + T.swipe + T.hold - performance.now()));
 
     // Moves run one at a time so cards never cross each other.
@@ -238,10 +239,6 @@ export function TaskList({ api, cards, onReward, onLanded, onSettled, onError, o
                     {card.rolloverCount}
                   </span>
                 )}
-                <span className="reward">
-                  <i className="coin" aria-hidden />
-                  {card.coins}
-                </span>
               </span>
               <button
                 className={done ? "check checked" : "check"}

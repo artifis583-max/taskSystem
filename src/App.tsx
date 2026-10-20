@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CoinFly, type Flight } from "./CoinFly";
+import { prefersReducedMotion } from "./motion";
 import type { Api } from "./api";
 import type { AppState, CompleteResult } from "./types";
 import { CountUp } from "./CountUp";
@@ -14,7 +16,13 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function App({ api }: { api: Api }) {
   const [state, setState] = useState<AppState | null>(null);
+  // Shown balance. While a coin chip is flying it waits, so the total only changes when the coin lands.
   const [balance, setBalance] = useState(0);
+  const latestBalance = useRef(0);
+  const [flights, setFlights] = useState<Flight[]>([]);
+  const flying = useRef(0);
+  const flightId = useRef(0);
+  const coinTarget = useRef<HTMLSpanElement>(null);
   const [tab, setTab] = useState<Tab>("today");
   const [adding, setAdding] = useState(false);
   const [showLevel, setShowLevel] = useState(false);
@@ -26,7 +34,8 @@ export default function App({ api }: { api: Api }) {
     try {
       const s = await api.getState();
       setState(s);
-      setBalance(s.balance);
+      latestBalance.current = s.balance;
+      if (flying.current === 0) setBalance(s.balance);
     } catch (e) {
       showError(String(e));
     }
@@ -49,7 +58,21 @@ export default function App({ api }: { api: Api }) {
     };
   }, [api, refresh]);
 
-  const onReward = (r: CompleteResult) => setBalance(r.balance);
+  const onReward = (r: CompleteResult, from: DOMRect | null) => {
+    latestBalance.current = Math.max(latestBalance.current, r.balance);
+    const to = coinTarget.current?.getBoundingClientRect();
+    if (!from || !to || prefersReducedMotion() || r.coins <= 0) {
+      if (flying.current === 0) setBalance(latestBalance.current);
+      return;
+    }
+    flying.current++;
+    setFlights((f) => [...f, { id: ++flightId.current, coins: r.coins, from, to, balance: r.balance }]);
+  };
+  const onFlightLanded = (f: Flight) => {
+    flying.current--;
+    setFlights((all) => all.filter((x) => x.id !== f.id));
+    setBalance(flying.current === 0 ? latestBalance.current : f.balance);
+  };
   const onLanded = (r: CompleteResult) => {
     if (r.levelAfter > r.levelBefore) {
       setBanner(`Level up! You're now level ${r.levelAfter}`);
@@ -69,7 +92,7 @@ export default function App({ api }: { api: Api }) {
           <span className="weekday" data-tauri-drag-region>{day.weekday}</span>
           <span className="date" data-tauri-drag-region>{day.date}</span>
         </div>
-        <span className="stat" title="Coins">
+        <span className="stat" title="Coins" ref={coinTarget}>
           <i className="coin" aria-hidden />
           <CountUp value={balance} />
         </span>
@@ -167,6 +190,10 @@ export default function App({ api }: { api: Api }) {
         {tab === "upcoming" && <p className="placeholder">Upcoming days are coming in a later build.</p>}
         {tab === "rewards" && <p className="placeholder">The reward shop is coming in a later build.</p>}
       </main>
+
+      {flights.map((f) => (
+        <CoinFly key={f.id} flight={f} onLanded={onFlightLanded} />
+      ))}
 
       {error && (
         <div className="toast" role="alert">

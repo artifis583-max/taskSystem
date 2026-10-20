@@ -51,7 +51,7 @@ A small always-available widget in the bottom-right corner of the screen that sh
 - Window: frameless, transparent background, ~455 × 500 px at 100% scaling, anchored to the bottom-right of the monitor **work area** (above the taskbar) with ~6 px margin. Drag by the header. Remember position; if it ends up off-screen (monitor unplugged), snap back to bottom-right.
 - Header pills show live values: `🪙 240` and `LV 3`. Clicking the level pill shows streak + XP-to-next-level.
 - Close (x) hides the widget to the tray. It does not quit.
-- Task card: title (bold), details line (smaller), checkbox on the right. If a task has rolled over, show a small `↻2` badge and its current coin value.
+- Task card: title (bold), details line (smaller), checkbox on the right. If a task has rolled over, show a small `↻2` badge. **Cards never show coin amounts**; coins only appear in the flight animation when a task is completed (§3).
 - List scrolls when it overflows; header and tabs stay fixed.
 
 ### 2.2 Tabs
@@ -105,7 +105,7 @@ Uses the FLIP technique (measure → reorder DOM → invert with transform → p
 |---|---|---|---|
 | 1 | **Tick** | Checkbox fills green with a check. The `complete_occurrence` command is called right away. | 100 ms |
 | 2 | **Swipe left + bounce** | Card slides left ~33% of its width (as in the mockup); its text fades with a small overshoot, uncovering a green **DONE** label on the right. | 300 ms |
-| 3 | **Hold** | Card stays in the DONE state so the user sees it. Coin pill counts up to the new balance and pulses once. | 350 ms |
+| 3 | **Coin flight** | A `+N` coin chip pops up from the checkbox and flies in an arc to the coin counter in the header. The counter keeps its old value until the chip lands, then counts up and pulses. The card holds in the DONE state meanwhile. | 520 ms flight, 350 ms hold |
 | 4 | **Move to bottom** | Card slides back to full width and moves to the last position. Cards below slide up to fill the gap. | 350 ms |
 | 5 | **Land + bounce** | Card lands at the bottom with a small vertical bounce (overshoot ~6 px, settle). | 250 ms |
 
