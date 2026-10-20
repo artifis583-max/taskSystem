@@ -599,3 +599,32 @@ tr:last-child td { border-bottom: 0; }
 .backups-table .confirm-row { font-size: 13px; }
 .path-note { font-size: 12px; color: var(--text-muted); margin: 0 0 8px; }
 .path-note code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 11.5px; background: var(--control); padding: 2px 6px; border-radius: 5px; user-select: all; word-break: break-all; }
+
+/* ---------- compact widget (≈15% smaller; dashboard is unaffected) ---------- */
+html.widget .panel { width: 390px; height: 432px; }
+html.widget .header { height: 44px; padding: 8px 8px 4px 14px; gap: 5px; }
+html.widget .weekday { font-size: 16px; }
+html.widget .date { font-size: 12px; }
+html.widget .stat { height: 25px; padding: 0 9px; font-size: 12px; gap: 5px; }
+html.widget .icon-btn { width: 26px; height: 26px; }
+html.widget .popover { top: 40px; }
+html.widget .tabs { margin: 2px 10px 0; }
+html.widget .tab { height: 28px; font-size: 12px; }
+html.widget .badge { min-width: 16px; height: 16px; line-height: 16px; font-size: 10px; }
+html.widget .progress { padding: 10px 14px 0; }
+html.widget .list { padding: 10px 10px; gap: 6px; }
+html.widget .card { min-height: 54px; padding: 8px 12px; gap: 10px; }
+html.widget .title { font-size: 13px; }
+html.widget .details { font-size: 11.5px; }
+html.widget .check { width: 20px; height: 20px; border-radius: 5px; }
+html.widget .done-label { font-size: 13px; }
+html.widget .add { height: 36px; font-size: 12px; }
+html.widget .row-card { min-height: 52px; padding: 8px 10px 8px 12px; }
+html.widget .alert { padding: 8px 10px 8px 12px; }
+html.widget .alert.slim { margin: 10px 10px 0; font-size: 12px; }
+html.widget .price-btn { height: 27px; padding: 0 10px; font-size: 12px; }
+html.widget .up-row { padding: 7px 12px; }
+html.widget .form { padding: 12px 14px; gap: 9px; }
+html.widget .form input { padding: 7px 10px; font-size: 13px; }
+html.widget .seg button { padding: 5px 4px; font-size: 12px; }
+html.widget .placeholder { margin: 32px 20px; }

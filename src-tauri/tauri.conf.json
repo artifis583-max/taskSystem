@@ -14,8 +14,8 @@
       {
         "label": "widget",
         "title": "Task Widget",
-        "width": 480,
-        "height": 528,
+        "width": 414,
+        "height": 456,
         "resizable": false,
         "decorations": false,
         "transparent": true,

@@ -18,7 +18,7 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, RunEvent, WebviewUrl,
 
 const EDGE_MARGIN: i32 = 6;
 /// Logical size of the widget window (must match tauri.conf.json).
-const WIDGET_SIZE: (f64, f64) = (480.0, 528.0);
+const WIDGET_SIZE: (f64, f64) = (414.0, 456.0);
 
 fn show_widget(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("widget") {
