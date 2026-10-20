@@ -7,6 +7,7 @@ import { CountUp } from "./CountUp";
 import { TaskList } from "./TaskList";
 import { AddTaskForm } from "./AddTaskForm";
 import { RewardsTab } from "./RewardsTab";
+import { UpcomingTab } from "./UpcomingTab";
 
 type Tab = "today" | "upcoming" | "rewards";
 const TABS: { id: Tab; label: string }[] = [
@@ -199,7 +200,7 @@ export default function App({ api }: { api: Api }) {
             />
             </>
           ) : null)}
-        {tab === "upcoming" && <p className="placeholder">Upcoming days are coming in a later build.</p>}
+        {tab === "upcoming" && state && <UpcomingTab state={state} />}
         {tab === "rewards" && state && (
           <RewardsTab api={api} state={state} onError={showError} onBanner={showBanner} />
         )}

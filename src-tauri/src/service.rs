@@ -93,6 +93,8 @@ pub struct AppState {
     pub rewards: Vec<crate::shop::Reward>,
     /// Most recent first.
     pub redemptions: Vec<crate::shop::Redemption>,
+    pub upcoming: Vec<crate::manage::UpcomingDay>,
+    pub settings: crate::settings::Settings,
 }
 
 #[derive(Debug, Serialize)]
@@ -285,12 +287,23 @@ pub fn get_state(conn: &mut Connection, today: NaiveDate) -> Result<AppState> {
         revives: crate::shop::revive_info(conn, today)?,
         rewards: crate::shop::list_rewards(conn)?,
         redemptions: crate::shop::recent_redemptions(conn, 5)?,
+        upcoming: crate::manage::upcoming(conn, today, 7)?,
+        settings: crate::settings::load(conn)?,
     })
 }
 
 // ---------- writes ----------
 
-pub fn create_task(conn: &mut Connection, today: NaiveDate, t: NewTask) -> Result<i64> {
+/// Checked task fields, ready to store.
+pub(crate) struct ValidTask {
+    pub title: String,
+    pub details: String,
+    pub schedule_json: String,
+    pub start: NaiveDate,
+}
+
+/// `old_start` is the task's current start date when editing; keeping it is always allowed.
+pub(crate) fn validate_task(t: &NewTask, today: NaiveDate, old_start: Option<NaiveDate>) -> Result<ValidTask> {
     let title = t.title.trim();
     let len = title.chars().count();
     if len == 0 || len > 120 {
@@ -305,16 +318,31 @@ pub fn create_task(conn: &mut Connection, today: NaiveDate, t: NewTask) -> Resul
     }
     let start = match &t.start_date {
         Some(s) => pd(s)?,
-        None => today,
+        None => old_start.unwrap_or(today),
     };
-    let schedule_json = serde_json::to_string(&t.schedule).expect("schedule serializes");
+    if start < today && Some(start) != old_start {
+        return rule("Start date can't be in the past.");
+    }
+    if (start - today).num_days() > 5 * 366 {
+        return rule("Start date is too far away.");
+    }
+    Ok(ValidTask {
+        title: title.to_string(),
+        details: details.to_string(),
+        schedule_json: serde_json::to_string(&t.schedule).expect("schedule serializes"),
+        start,
+    })
+}
+
+pub fn create_task(conn: &mut Connection, today: NaiveDate, t: NewTask) -> Result<i64> {
+    let v = validate_task(&t, today, None)?;
     let id = {
         let tx = conn.transaction()?;
         let order: i64 = tx.query_row("SELECT COALESCE(MAX(sort_order),0)+1 FROM tasks", [], |r| r.get(0))?;
         tx.execute(
             "INSERT INTO tasks (title, details, size, schedule_json, start_date, sort_order, created_at)
              VALUES (?1,?2,?3,?4,?5,?6,?7)",
-            params![title, details, t.size.as_str(), schedule_json, ds(start), order, now_utc()],
+            params![v.title, v.details, t.size.as_str(), v.schedule_json, ds(v.start), order, now_utc()],
         )?;
         let id = tx.last_insert_rowid();
         tx.commit()?;

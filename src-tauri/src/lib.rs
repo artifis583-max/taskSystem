@@ -2,7 +2,9 @@ mod commands;
 pub mod config;
 pub mod db;
 pub mod domain;
+pub mod manage;
 pub mod service;
+pub mod settings;
 pub mod shop;
 
 use std::sync::Mutex;

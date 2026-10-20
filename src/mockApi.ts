@@ -52,6 +52,15 @@ export function createMockApi(): Api {
     },
     rewards: structuredClone(rewards),
     redemptions: structuredClone(redemptions.slice(0, 5)),
+    upcoming: [1, 2, 3, 4, 5, 6, 7].map((i) => ({
+      date: new Date(Date.now() + i * 864e5).toISOString().slice(0, 10),
+      items: [
+        ...(i % 2 ? [{ taskId: 4, title: "Gym", details: "Leg day", size: "large" as Size }] : []),
+        ...(i < 6 ? [{ taskId: 2, title: "Finish DSA practice", details: "2 problems from the sheet", size: "medium" as Size }] : []),
+        ...(i === 2 ? [{ taskId: 9, title: "Dentist", details: "4:30 pm", size: "small" as Size }] : []),
+      ],
+    })),
+    settings: { alwaysOnTop: false, theme: "system", motion: "system" },
   });
   const wait = (ms = 120) => new Promise((r) => setTimeout(r, ms));
   const changed = () => listeners.forEach((l) => l());

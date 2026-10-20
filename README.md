@@ -10,7 +10,7 @@ Full spec: [docs/PLAN.md](docs/PLAN.md).
 |---|---|
 | 1. Widget shell (bottom-right, frameless, tray, close hides) | Done |
 | 2. Tasks + completion + animation + undo | Done |
-| 3. Days + rollover (weekday / every-N schedules, ×0.8 penalty, skip, remove) | Done, except the "Upcoming" tab |
+| 3. Days + rollover (weekday / every-N schedules, ×0.8 penalty, skip, remove) | Done |
 | 4. XP, streak, levels | Engine done (level bonus applies to coins); header shows level and streak |
 | 5. Rewards shop + revives | Done |
 | 6. Dashboard, autostart, remember position | Not started |
@@ -54,6 +54,7 @@ Data lives in `%APPDATA%\com.taskwidget.app\data.db`.
 
 - **Tick a task:** checkbox turns green, the card slides left and shows DONE, the coin count goes up, then the card moves to the bottom with a bounce.
 - **Undo:** tap a green checkbox and confirm. Works until the day is closed, and only if you haven't spent the coins.
+- **Upcoming tab:** what's planned for the next 7 days. New tasks can start today, tomorrow, or on a date you pick.
 - **Click a card** to skip it for today or remove the task.
 - **Missed tasks** roll over to the next day, worth ×0.8 coins per rollover (min 1).
 - **Rewards tab:** make your own rewards and spend coins on them (with a confirm step). Coins can never go below zero.

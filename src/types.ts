@@ -41,6 +41,49 @@ export interface AppState {
   rewards: Reward[];
   /** Most recent first. */
   redemptions: Redemption[];
+  upcoming: UpcomingDay[];
+  settings: Settings;
+}
+
+export interface UpcomingDay {
+  date: string;
+  items: { taskId: number; title: string; details: string; size: Size }[];
+}
+
+export interface Settings {
+  alwaysOnTop: boolean;
+  theme: "system" | "light" | "dark";
+  motion: "system" | "reduced" | "full";
+}
+
+export interface TaskInfo {
+  id: number;
+  title: string;
+  details: string;
+  size: Size;
+  schedule: Schedule;
+  startDate: string;
+  status: "active" | "paused";
+}
+
+export interface DayInfo {
+  date: string;
+  eligible: number;
+  completed: number;
+  result: "qualified" | "neutral" | "broken" | "revived";
+  streakAfter: number;
+}
+
+export interface Stats {
+  level: number;
+  xp: number;
+  streak: number;
+  bestStreak: number;
+  coinsEarned: number;
+  coinsSpent: number;
+  tasksCompleted: number;
+  completion30d: number | null;
+  levels: { level: number; xp: number; streak: number }[];
 }
 
 export interface ReviveInfo {

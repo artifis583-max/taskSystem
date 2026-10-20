@@ -1,21 +1,39 @@
 import { useState } from "react";
-import type { NewTask, Schedule, Size } from "./types";
+import type { NewTask, Schedule, Size, TaskInfo } from "./types";
 
 const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 type Repeat = Schedule["kind"];
+type Start = "today" | "tomorrow" | "date";
 
-export function AddTaskForm({ onSave, onCancel }: { onSave(t: NewTask): void; onCancel(): void }) {
-  const [title, setTitle] = useState("");
-  const [details, setDetails] = useState("");
-  const [size, setSize] = useState<Size>("small");
-  const [repeat, setRepeat] = useState<Repeat>("once");
-  const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4]);
-  const [n, setN] = useState(2);
+function isoDay(offset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+interface Props {
+  /** Editing an existing task (dashboard). */
+  initial?: TaskInfo;
+  onSave(t: NewTask): void | Promise<void>;
+  onCancel(): void;
+}
+
+export function AddTaskForm({ initial, onSave, onCancel }: Props) {
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [details, setDetails] = useState(initial?.details ?? "");
+  const [size, setSize] = useState<Size>(initial?.size ?? "small");
+  const [repeat, setRepeat] = useState<Repeat>(initial?.schedule.kind ?? "once");
+  const [days, setDays] = useState<number[]>(initial?.schedule.kind === "weekdays" ? initial.schedule.days : [0, 1, 2, 3, 4]);
+  const [n, setN] = useState(initial?.schedule.kind === "every_n_days" ? initial.schedule.n : 2);
+  const initialStart: Start = !initial || initial.startDate === isoDay() ? "today" : initial.startDate === isoDay(1) ? "tomorrow" : "date";
+  const [start, setStart] = useState<Start>(initialStart);
+  const [date, setDate] = useState(initial?.startDate ?? isoDay(2));
   const [saving, setSaving] = useState(false);
 
   const schedule: Schedule =
     repeat === "weekdays" ? { kind: "weekdays", days } : repeat === "every_n_days" ? { kind: "every_n_days", n } : { kind: repeat };
-  const valid = title.trim().length > 0 && (repeat !== "weekdays" || days.length > 0);
+  const startDate = start === "today" ? isoDay() : start === "tomorrow" ? isoDay(1) : date;
+  const valid = title.trim().length > 0 && (repeat !== "weekdays" || days.length > 0) && /^\d{4}-\d{2}-\d{2}$/.test(startDate);
 
   return (
     <form
@@ -24,7 +42,9 @@ export function AddTaskForm({ onSave, onCancel }: { onSave(t: NewTask): void; on
         e.preventDefault();
         if (!valid || saving) return;
         setSaving(true);
-        await onSave({ title, details, size, schedule });
+        // When editing, keep a past start date as it was.
+        const keepStart = initial && start === "date" && date === initial.startDate;
+        await onSave({ title, details, size, schedule, startDate: keepStart ? initial.startDate : startDate });
         setSaving(false);
       }}
     >
@@ -41,7 +61,7 @@ export function AddTaskForm({ onSave, onCancel }: { onSave(t: NewTask): void; on
         <div className="seg">
           {(["small", "medium", "large"] as Size[]).map((s) => (
             <button type="button" key={s} className={size === s ? "on" : ""} onClick={() => setSize(s)}>
-              {s} · {s === "small" ? 10 : s === "medium" ? 20 : 30}
+              {s}
             </button>
           ))}
         </div>
@@ -84,12 +104,31 @@ export function AddTaskForm({ onSave, onCancel }: { onSave(t: NewTask): void; on
           </div>
         )}
       </div>
+      <div className="field">
+        {repeat === "once" ? "On" : "Starts"}
+        <div className="seg">
+          {(
+            [
+              ["today", "Today"],
+              ["tomorrow", "Tomorrow"],
+              ["date", "Pick date"],
+            ] as [Start, string][]
+          ).map(([k, label]) => (
+            <button type="button" key={k} className={start === k ? "on" : ""} onClick={() => setStart(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {start === "date" && (
+          <input type="date" value={date} min={initial?.startDate && initial.startDate < isoDay() ? initial.startDate : isoDay()} onChange={(e) => setDate(e.target.value)} />
+        )}
+      </div>
       <div className="form-actions">
         <button type="button" className="mini ghost" onClick={onCancel}>
           Cancel
         </button>
         <button type="submit" className="mini" disabled={!valid || saving}>
-          Add task
+          {initial ? "Save" : "Add task"}
         </button>
       </div>
     </form>
