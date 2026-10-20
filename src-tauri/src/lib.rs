@@ -3,6 +3,7 @@ pub mod config;
 pub mod db;
 pub mod domain;
 pub mod service;
+pub mod shop;
 
 use std::sync::Mutex;
 use std::time::Duration;
@@ -103,6 +104,12 @@ pub fn run() {
             commands::uncomplete_occurrence,
             commands::skip_occurrence,
             commands::remove_task,
+            commands::buy_revive,
+            commands::use_revive,
+            commands::create_reward,
+            commands::update_reward,
+            commands::archive_reward,
+            commands::redeem_reward,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Task Widget");

@@ -1,4 +1,4 @@
-import type { AppState, CompleteResult, NewTask } from "./types";
+import type { AppState, CompleteResult, NewTask, RewardInput } from "./types";
 
 export interface Api {
   getState(): Promise<AppState>;
@@ -7,6 +7,15 @@ export interface Api {
   uncomplete(opId: string, occurrenceId: number): Promise<number>;
   skip(occurrenceId: number): Promise<void>;
   removeTask(taskId: number): Promise<void>;
+  /** Returns the new balance. */
+  buyRevive(opId: string): Promise<number>;
+  /** Returns the restored streak. */
+  useRevive(): Promise<number>;
+  createReward(reward: RewardInput): Promise<number>;
+  updateReward(id: number, reward: RewardInput): Promise<void>;
+  archiveReward(id: number): Promise<void>;
+  /** Returns the new balance. */
+  redeemReward(opId: string, id: number): Promise<number>;
   /** Called when data changed (any window) or the date rolled over. */
   onChanged(cb: () => void): () => void;
   hideWindow(): void;
@@ -25,6 +34,12 @@ async function tauriApi(): Promise<Api> {
     uncomplete: (opId, occurrenceId) => invoke("uncomplete_occurrence", { opId, occurrenceId }),
     skip: (occurrenceId) => invoke("skip_occurrence", { occurrenceId }),
     removeTask: (taskId) => invoke("remove_task", { taskId }),
+    buyRevive: (opId) => invoke("buy_revive", { opId }),
+    useRevive: () => invoke("use_revive"),
+    createReward: (reward) => invoke("create_reward", { reward }),
+    updateReward: (id, reward) => invoke("update_reward", { id, reward }),
+    archiveReward: (id) => invoke("archive_reward", { id }),
+    redeemReward: (opId, id) => invoke("redeem_reward", { opId, id }),
     onChanged(cb) {
       const un = listen("state-changed", () => cb());
       return () => void un.then((f) => f());

@@ -37,6 +37,39 @@ export interface AppState {
   level: number;
   nextLevel: { level: number; xp: number; streak: number } | null;
   cards: TaskCard[];
+  revives: ReviveInfo;
+  rewards: Reward[];
+  /** Most recent first. */
+  redemptions: Redemption[];
+}
+
+export interface ReviveInfo {
+  freeAvailable: boolean;
+  bought: number;
+  price: number;
+  /** Set when yesterday broke a streak that can still be revived today. */
+  brokenDate: string | null;
+  streakToRestore: number;
+}
+
+export interface Reward {
+  id: number;
+  name: string;
+  note: string;
+  price: number;
+}
+
+export interface RewardInput {
+  name: string;
+  note: string;
+  price: number;
+}
+
+export interface Redemption {
+  id: number;
+  name: string;
+  price: number;
+  createdAt: string;
 }
 
 export interface CompleteResult {

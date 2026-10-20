@@ -24,3 +24,11 @@ pub const LEVELS: &[(i64, i64, i64)] = &[
     (6, 3_000, 60),
     (7, 6_000, 100),
 ];
+
+/// Coin price of one extra revive.
+pub const REVIVE_PRICE: i64 = 100;
+
+/// Reward shop limits.
+pub const REWARD_NAME_MAX: usize = 60;
+pub const REWARD_NOTE_MAX: usize = 200;
+pub const REWARD_PRICE_MAX: i64 = 1_000_000;

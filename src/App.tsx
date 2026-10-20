@@ -6,6 +6,7 @@ import type { AppState, CompleteResult } from "./types";
 import { CountUp } from "./CountUp";
 import { TaskList } from "./TaskList";
 import { AddTaskForm } from "./AddTaskForm";
+import { RewardsTab } from "./RewardsTab";
 
 type Tab = "today" | "upcoming" | "rewards";
 const TABS: { id: Tab; label: string }[] = [
@@ -73,11 +74,14 @@ export default function App({ api }: { api: Api }) {
     setFlights((all) => all.filter((x) => x.id !== f.id));
     setBalance(flying.current === 0 ? latestBalance.current : f.balance);
   };
+  const bannerTimer = useRef<number>();
+  function showBanner(msg: string) {
+    setBanner(msg);
+    window.clearTimeout(bannerTimer.current);
+    bannerTimer.current = window.setTimeout(() => setBanner(null), 2200);
+  }
   const onLanded = (r: CompleteResult) => {
-    if (r.levelAfter > r.levelBefore) {
-      setBanner(`Level up! You're now level ${r.levelAfter}`);
-      window.setTimeout(() => setBanner(null), 2000);
-    }
+    if (r.levelAfter > r.levelBefore) showBanner(`Level up! You're now level ${r.levelAfter}`);
   };
 
   const cards = state?.cards ?? [];
@@ -177,6 +181,13 @@ export default function App({ api }: { api: Api }) {
               }}
             />
           ) : state ? (
+            <>
+            {state.revives.brokenDate && (
+              <button className="alert slim" onClick={() => setTab("rewards")}>
+                <span>Your {state.revives.streakToRestore}-day streak broke yesterday.</span>
+                <strong>Save it →</strong>
+              </button>
+            )}
             <TaskList
               api={api}
               cards={state.cards}
@@ -186,9 +197,12 @@ export default function App({ api }: { api: Api }) {
               onError={showError}
               onAdd={() => setAdding(true)}
             />
+            </>
           ) : null)}
         {tab === "upcoming" && <p className="placeholder">Upcoming days are coming in a later build.</p>}
-        {tab === "rewards" && <p className="placeholder">The reward shop is coming in a later build.</p>}
+        {tab === "rewards" && state && (
+          <RewardsTab api={api} state={state} onError={showError} onBanner={showBanner} />
+        )}
       </main>
 
       {flights.map((f) => (

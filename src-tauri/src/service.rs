@@ -23,21 +23,21 @@ impl Serialize for AppError {
 
 pub type Result<T> = std::result::Result<T, AppError>;
 
-fn rule<T>(msg: &str) -> Result<T> {
+pub(crate) fn rule<T>(msg: &str) -> Result<T> {
     Err(AppError::Rule(msg.to_string()))
 }
 
 const DATE_FMT: &str = "%Y-%m-%d";
 
-fn ds(d: NaiveDate) -> String {
+pub(crate) fn ds(d: NaiveDate) -> String {
     d.format(DATE_FMT).to_string()
 }
 
-fn pd(s: &str) -> Result<NaiveDate> {
+pub(crate) fn pd(s: &str) -> Result<NaiveDate> {
     NaiveDate::parse_from_str(s, DATE_FMT).map_err(|_| AppError::Rule(format!("Bad date: {s}")))
 }
 
-fn now_utc() -> String {
+pub(crate) fn now_utc() -> String {
     Utc::now().to_rfc3339()
 }
 
@@ -89,6 +89,10 @@ pub struct AppState {
     pub next_level: Option<NextLevel>,
     /// Pending first (user order), then completed (oldest → newest).
     pub cards: Vec<TaskCard>,
+    pub revives: crate::shop::ReviveInfo,
+    pub rewards: Vec<crate::shop::Reward>,
+    /// Most recent first.
+    pub redemptions: Vec<crate::shop::Redemption>,
 }
 
 #[derive(Debug, Serialize)]
@@ -103,15 +107,15 @@ pub struct CompleteResult {
 
 // ---------- small queries ----------
 
-fn balance(c: &Connection) -> Result<i64> {
+pub(crate) fn balance(c: &Connection) -> Result<i64> {
     Ok(c.query_row("SELECT COALESCE(SUM(coins),0) FROM ledger", [], |r| r.get(0))?)
 }
 
-fn total_xp(c: &Connection) -> Result<i64> {
+pub(crate) fn total_xp(c: &Connection) -> Result<i64> {
     Ok(c.query_row("SELECT COALESCE(SUM(xp),0) FROM ledger", [], |r| r.get(0))?)
 }
 
-fn current_streak(c: &Connection) -> Result<i64> {
+pub(crate) fn current_streak(c: &Connection) -> Result<i64> {
     Ok(c
         .query_row("SELECT streak_after FROM days ORDER BY date DESC LIMIT 1", [], |r| r.get(0))
         .optional()?
@@ -128,11 +132,11 @@ fn base_rewards(size: &str, coin_override: Option<i64>, xp_override: Option<i64>
     (coin_override.unwrap_or(c), xp_override.unwrap_or(x))
 }
 
-fn op_seen(c: &Connection, op_id: &str) -> Result<bool> {
+pub(crate) fn op_seen(c: &Connection, op_id: &str) -> Result<bool> {
     Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM ledger WHERE op_id = ?1)", [op_id], |r| r.get(0))?)
 }
 
-fn check_op_id(op_id: &str) -> Result<()> {
+pub(crate) fn check_op_id(op_id: &str) -> Result<()> {
     if op_id.is_empty() || op_id.len() > 64 {
         return rule("Invalid operation id.");
     }
@@ -278,6 +282,9 @@ pub fn get_state(conn: &mut Connection, today: NaiveDate) -> Result<AppState> {
         level,
         next_level: domain::next_level(level).map(|(level, xp, streak)| NextLevel { level, xp, streak }),
         cards,
+        revives: crate::shop::revive_info(conn, today)?,
+        rewards: crate::shop::list_rewards(conn)?,
+        redemptions: crate::shop::recent_redemptions(conn, 5)?,
     })
 }
 

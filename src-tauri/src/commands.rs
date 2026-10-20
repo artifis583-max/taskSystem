@@ -63,3 +63,49 @@ pub fn remove_task(app: AppHandle, db: State<Db>, task_id: i64) -> R<()> {
     changed(&app);
     Ok(())
 }
+
+// ---------- phase 5: rewards and revives ----------
+
+use crate::shop::{self, RewardInput};
+
+#[tauri::command]
+pub fn buy_revive(app: AppHandle, db: State<Db>, op_id: String) -> R<i64> {
+    let b = shop::buy_revive(&mut db.lock(), today(), &op_id)?;
+    changed(&app);
+    Ok(b)
+}
+
+#[tauri::command]
+pub fn use_revive(app: AppHandle, db: State<Db>) -> R<i64> {
+    let s = shop::use_revive(&mut db.lock(), today())?;
+    changed(&app);
+    Ok(s)
+}
+
+#[tauri::command]
+pub fn create_reward(app: AppHandle, db: State<Db>, reward: RewardInput) -> R<i64> {
+    let id = shop::create_reward(&mut db.lock(), reward)?;
+    changed(&app);
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn update_reward(app: AppHandle, db: State<Db>, id: i64, reward: RewardInput) -> R<()> {
+    shop::update_reward(&mut db.lock(), id, reward)?;
+    changed(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn archive_reward(app: AppHandle, db: State<Db>, id: i64) -> R<()> {
+    shop::archive_reward(&mut db.lock(), id)?;
+    changed(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn redeem_reward(app: AppHandle, db: State<Db>, op_id: String, id: i64) -> R<i64> {
+    let b = shop::redeem_reward(&mut db.lock(), today(), &op_id, id)?;
+    changed(&app);
+    Ok(b)
+}
